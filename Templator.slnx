@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Templator.Core/Templator.Core.csproj" />
+    <Project Path="src/Templator/Templator.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Templator.Tests/Templator.Tests.csproj" />
+    <Project Path="tests/Templator.UiTests/Templator.UiTests.csproj" />
+  </Folder>
+</Solution>

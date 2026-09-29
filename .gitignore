@@ -1,0 +1,12 @@
+**/bin/
+**/obj/
+.vs/
+.tools/
+artifacts/
+*.user
+*.suo
+*.tmp
+*.eml
+templates.json*
+window-state.json
+crash.log

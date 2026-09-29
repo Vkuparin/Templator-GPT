@@ -1,0 +1,27 @@
+<Window x:Class="Templator.Views.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Workspace settings" Style="{StaticResource {x:Type Window}}" Width="520" SizeToContent="Height" ResizeMode="NoResize" WindowStartupLocation="CenterOwner" ShowInTaskbar="False">
+    <StackPanel Margin="28">
+        <TextBlock Text="Your workspace" FontSize="24" FontWeight="SemiBold" Margin="0,0,0,8"/>
+        <TextBlock Text="Small defaults for a smoother start." Foreground="{StaticResource Muted}" Margin="0,0,0,24"/>
+        <TextBlock Text="Default To" Style="{StaticResource Caption}"/>
+        <TextBox x:Name="DefaultTo" AutomationProperties.Name="Default To"/>
+        <TextBlock Text="Default Cc" Style="{StaticResource Caption}" Margin="0,14,0,6"/>
+        <TextBox x:Name="DefaultCc" AutomationProperties.Name="Default Cc"/>
+        <TextBlock Text="Used only for new templates. Existing and reset values stay as you left them." Style="{StaticResource Caption}" Margin="0,10,0,20"/>
+        <TextBlock Text="Long-draft warning (URL characters)" Style="{StaticResource Caption}"/>
+        <TextBox x:Name="Threshold" AutomationProperties.Name="Mailto length threshold"/>
+        <TextBlock Text="Default: 1,800. Client limits vary; this is a precaution, not a guarantee." Style="{StaticResource Caption}" Margin="0,10,0,0"/>
+        <Separator/>
+        <TextBlock Text="Stored on this device" FontWeight="SemiBold" Margin="0,0,0,8"/>
+        <TextBlock x:Name="FolderText" Foreground="{StaticResource Muted}" FontSize="12"/>
+        <Button Content="Open data folder  ↗" Click="OpenFolder" Style="{StaticResource Quiet}" HorizontalAlignment="Left" Margin="0,8,0,0"/>
+        <TextBlock Text="Backups include your saved field values. Keep exported files somewhere you trust." Style="{StaticResource Caption}" Margin="0,14,0,14"/>
+        <TextBlock x:Name="ErrorText" Foreground="{StaticResource Warning}" Margin="0,0,0,14"/>
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button Content="Cancel" IsCancel="True" Style="{StaticResource Quiet}" Margin="0,0,10,0"/>
+            <Button Content="Save settings" Click="Save" Style="{StaticResource Primary}" IsDefault="True"/>
+        </StackPanel>
+    </StackPanel>
+</Window>
