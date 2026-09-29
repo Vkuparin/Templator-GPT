@@ -11,7 +11,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <ApplicationIcon>Assets/Templator.ico</ApplicationIcon>
-    <Version>1.1.0</Version>
+    <Version>1.2.0</Version>
     <Product>Templator</Product>
     <Description>A local workspace for reusable email drafts.</Description>
   </PropertyGroup>

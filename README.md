@@ -12,9 +12,11 @@ or network calls. Templator **never sends mail**.
 
 ## Start
 
-Windows 10/11 x64 with the [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/en-us/download/dotnet/10.0).
-Extract the portable ZIP and run `Templator.exe`; no installer or administrator
-rights needed. The optional standalone build includes the runtime.
+Windows 10/11 x64. Download **Templator.v1.2.0.zip** from the
+[latest release](https://github.com/Vkuparin/Templator-GPT/releases/latest),
+extract it and run `Templator.exe`. This standalone build includes the runtime;
+no installer or administrator rights are needed. The smaller `-portable` ZIP
+requires the [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/en-us/download/dotnet/10.0).
 
 Build from source with the .NET 10 SDK:
 
@@ -61,7 +63,9 @@ separated by commas or semicolons. Display names and internationalized email
 addresses are not supported; message content supports full Unicode.
 
 - **Duplicate** makes an independent copy, including remembered values.
-- **Reset values** clears the selected template's saved input after confirmation.
+- **Reset to variable names** clears filled values and restores the named chips,
+  keeping the template text and definitions intact. **Undo reset** restores the
+  previous values until you change a variable's value/definition or close the app.
 - Right-click a library item to move it up/down, duplicate, or delete it.
 - **Import** adds copies from a backup without replacing existing templates or
   settings. **Export** backs up the entire library, including saved values.
@@ -81,6 +85,31 @@ explicitly open the full link anyway. Copy body/full text also work independentl
 Mail clients have different link limits and `.eml` editing behavior; the threshold
 is advisory. The clipboard fallback is usually the most predictable choice.
 
+**Open draft can be used repeatedly.** After discarding or sending a draft in your
+mail app, edit the email here and click it again for a fresh request. Each click
+validates the current content; incomplete or invalid fields get an explanation
+instead of a disabled button. Opening a draft never clears the template or values.
+Templator cannot track whether you sent or discarded a draft in another app.
+
+## Update without losing templates
+
+1. Close Templator. Optionally use **Export** first for an extra backup elsewhere.
+2. Extract the new release ZIP into a new folder, or replace the old executable.
+3. Run the new `Templator.exe` using the same Windows account. Your library and
+   settings load from the same `%APPDATA%\Templator-GPT` folder automatically.
+
+Release ZIPs contain the application and README, never your library. Do not delete
+the data folder when updating. If you use `TEMPLATOR_DATA_DIR`, keep that override
+the same. Version 1.2.0 uses the existing version-1 JSON format, with no migration.
+
+Before this version opens an existing valid library, it creates
+`backups/templates-before-1.2.0.json` inside the data folder. Later saves and
+restarts never overwrite this snapshot. If creating it fails, startup stops with
+an error and leaves the original library untouched. Settings → **Open data folder**
+locates it. You can import the snapshot, or close the app and copy it over
+`templates.json` for an exact restoration. Keep a separate exported backup when
+moving computers; local backups do not protect against disk loss.
+
 ## Local data and recovery
 
 Data is stored at `%APPDATA%\Templator-GPT`, separate from any older Templator
@@ -88,6 +117,8 @@ installation. This app never reads that older folder automatically.
 
 - `templates.json`: templates, definitions, values, and settings.
 - `templates.json.bak`: previous successful save, retained during atomic replacement.
+- `backups/templates-before-<app-version>.json`: original library at first launch
+  of that version with an existing store; retained independently of autosaves.
 - `templates.json.bad-<timestamp>`: original malformed file preserved for recovery.
 - `window-state.json`: window bounds. Invalid/off-screen bounds are ignored.
 - `crash.log`: last-chance exception diagnostics, if needed.

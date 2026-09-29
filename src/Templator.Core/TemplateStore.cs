@@ -18,10 +18,11 @@ public sealed class TemplateStore(string folder)
         return new FileStream(Path.Combine(Folder, "store.lock"), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
     }
 
-    public LoadResult Load()
+    public LoadResult Load(string? appVersion = null)
     {
         if (!File.Exists(FilePath)) return new(new StoreData { Templates = [Samples.Sap(), Samples.Sap(true)] });
-        try { return new(Read(FilePath)); }
+        StoreData data;
+        try { data = Read(FilePath); }
         catch (Exception e) when (e is JsonException or InvalidDataException)
         {
             // Access and future-version errors must never reset the store.
@@ -29,6 +30,28 @@ public sealed class TemplateStore(string folder)
             File.Move(FilePath, backup);
             return new(new StoreData(), $"Invalid data preserved at {backup}. Import a backup to recover.");
         }
+        // A validated, byte-for-byte snapshot precedes this version's first save.
+        // Unlike the rolling .bak, later autosaves can never replace this snapshot.
+        if (appVersion != null) PreserveVersionBackup(appVersion);
+        return new(data);
+    }
+
+    private void PreserveVersionBackup(string version)
+    {
+        if (!System.Version.TryParse(version, out var parsed)) throw new ArgumentException("Invalid app version.", nameof(version));
+        var folder = Path.Combine(Folder, "backups");
+        var destination = Path.Combine(folder, $"templates-before-{parsed}.json");
+        if (File.Exists(destination)) return;
+        Directory.CreateDirectory(folder);
+        var temporary = destination + "." + Guid.NewGuid().ToString("N") + ".tmp";
+        try
+        {
+            var bytes = File.ReadAllBytes(FilePath);
+            using (var stream = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+            { stream.Write(bytes); stream.Flush(flushToDisk: true); }
+            File.Move(temporary, destination);
+        }
+        finally { if (File.Exists(temporary)) File.Delete(temporary); }
     }
 
     public static StoreData Read(string path)

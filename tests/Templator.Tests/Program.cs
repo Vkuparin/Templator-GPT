@@ -193,5 +193,30 @@ Check("Friendly names generate safe, unique internal keys", () =>
     Equal("customer_name_3", VariableNaming.NewKey("Customer name", ["customer_name", "customer_name_2"]));
     Equal("field", VariableNaming.NewKey("项目", []));
 });
+Check("Upgrade snapshot preserves original bytes, IDs, settings and values across saves", () =>
+{
+    var store = Store(); var t = Samples.Sap(true); t.Values["recipient"] = "saved@example.com";
+    var data = Data(t); data.Settings.DefaultTo = "default@example.com"; store.Save(data);
+    var original = File.ReadAllBytes(store.FilePath);
+    var loaded = store.Load("1.2.0").Data;
+    var backup = Path.Combine(store.Folder, "backups", "templates-before-1.2.0.json");
+    True(original.SequenceEqual(File.ReadAllBytes(backup)));
+    Equal(t.Id, loaded.Templates[0].Id); Equal("saved@example.com", loaded.Templates[0].Variables[0].Value);
+    Equal("default@example.com", loaded.Settings.DefaultTo);
+    loaded.Templates[0].Body = "New edit"; store.Save(loaded); store.Load("1.2.0");
+    True(original.SequenceEqual(File.ReadAllBytes(backup)));
+    store.Load("1.3.0"); Equal("New edit", TemplateStore.Read(Path.Combine(store.Folder, "backups", "templates-before-1.3.0.json")).Templates[0].Body);
+});
+Check("Failed upgrade backup leaves the original library untouched and stops loading", () =>
+{
+    var store = Store(); store.Save(Data(Template("Keep me"))); var original = File.ReadAllText(store.FilePath);
+    File.WriteAllText(Path.Combine(store.Folder, "backups"), "blocks the backup directory");
+    Throws<IOException>(() => store.Load("1.2.0")); Equal(original, File.ReadAllText(store.FilePath));
+});
+Check("Future schema is never copied into a successful upgrade snapshot", () =>
+{
+    var store = Store(); Directory.CreateDirectory(store.Folder); File.WriteAllText(store.FilePath, "{\"version\":99}");
+    Throws<NotSupportedException>(() => store.Load("1.2.0")); True(!Directory.Exists(Path.Combine(store.Folder, "backups")));
+});
 Console.WriteLine($"\n{passed} passed; {failed} failed. Test data: {root}");
 return failed == 0 ? 0 : 1;

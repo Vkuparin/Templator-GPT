@@ -154,6 +154,21 @@ than silently normalizing broken user data.
 
 ## Draft handoff
 
+Opening a draft is repeatable and never consumes the template or clears values.
+Keep the action enabled when a template is selected; validate afresh on every
+click and explain missing/invalid fields before any shell handoff. Sending or
+discarding in another application has no effect on Templator's editing state.
+
+Reset to variable names clears values in one batch without flattening chips.
+Offer an in-session undo until a subsequent value/definition edit. Preserve
+search-result selection while editing; reevaluate filtering on query changes.
+
+Before loading an existing valid library under a new app version, atomically
+create a byte-for-byte snapshot in `backups/templates-before-<version>.json`.
+Never overwrite that snapshot; abort startup on backup failure. Keep the stable
+AppData location and version-1 schema across this release. ZIPs contain only app
+files; document close/extract/reopen and backup restoration in the README.
+
 Require all referenced required values and at least one valid To or Cc address.
 Support plain ASCII addresses separated by commas or semicolons; display names,
 internationalized addresses, control characters, and header injection are

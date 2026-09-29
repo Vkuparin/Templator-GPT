@@ -38,7 +38,13 @@ internal static class Program
             var workspace = new Workspace(store, store.Load());
             window = new MainWindow(workspace, platform) { ShowActivated = false, ShowInTaskbar = false, WindowStartupLocation = WindowStartupLocation.Manual, Left = -10000, Top = -10000 };
             window.Show(); Pump();
-            Check("WPF loads templates and blocks incomplete draft", () => Require(workspace.Templates.Count == 2 && !Find<Button>(window, "OpenDraftButton").IsEnabled));
+            Check("Incomplete drafts explain what is missing instead of disabling Open draft", () =>
+            {
+                Require(workspace.Templates.Count == 2 && Find<Button>(window, "OpenDraftButton").IsEnabled);
+                Find<Button>(window, "OpenDraftButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                Require(platform.Opened.Count == 0 && workspace.Notice.StartsWith("Draft not opened. Complete:"));
+                workspace.Notice = "";
+            });
             Check("Actual form bindings update values and preview", () =>
             {
                 var fields = Descendants<TextBox>(Find<ItemsControl>(window, "ValueInputs")).ToList();
@@ -63,7 +69,49 @@ internal static class Program
             {
                 Find<Button>(window, "OpenDraftButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                 Require(platform.Opened.Single().StartsWith("mailto:sap-team%40example.com"));
+            });
+            Check("Opening, editing, and reopening a draft keeps the button enabled", () =>
+            {
+                Pump();
+                var template = workspace.Selected!;
+                Require(workspace.CanOpen && Find<Button>(window, "OpenDraftButton").IsEnabled, workspace.Validation);
+                Find<Button>(window, "OpenDraftButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Pump();
+                Require(platform.Opened.Count == 2);
+                var body = Find<TokenEditor>(window, "BodyEditor");
+                body.CaretPosition = body.Document.ContentEnd; body.ReplaceSelection(" Revised."); Pump();
+                Require(workspace.Selected == template && workspace.CanOpen, workspace.Validation);
+                Find<Button>(window, "OpenDraftButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Pump();
+                Require(platform.Opened.Count == 3 && Uri.UnescapeDataString(platform.Opened.Last()).Contains("Revised."));
+                body.Undo(); Pump();
                 workspace.Notice = "";
+            });
+            Check("Reset restores names, undo restores values, and fresh edits invalidate undo", () =>
+            {
+                var template = workspace.Selected!;
+                var before = template.Body;
+                var values = new Dictionary<string, string>(template.Values);
+                Find<Button>(window, "ResetVariablesButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Pump();
+                Require(template.Variables.All(v => v.Value == "") && template.Body == before && workspace.CanUndoReset);
+                Require(Find<Button>(window, "UndoResetButton").IsVisible && !Find<Button>(window, "ResetVariablesButton").IsEnabled);
+                Capture(window, Path.Combine(output, "reset-variables.png"));
+                Find<Button>(window, "OpenDraftButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                Require(platform.Opened.Count == 3 && workspace.Notice.StartsWith("Draft not opened."));
+                Find<Button>(window, "UndoResetButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Pump();
+                Require(!workspace.CanUndoReset && workspace.CanOpen && values.All(p => template.Values[p.Key] == p.Value));
+                workspace.Reset(); template.Variables[0].Value = "new@example.com";
+                Require(!workspace.CanUndoReset); workspace.UndoReset(); Require(template.Variables[0].Value == "new@example.com");
+                foreach (var variable in template.Variables) variable.Value = values.GetValueOrDefault(variable.Key, "");
+                workspace.Notice = "";
+            });
+            Check("Editing a search result does not detach the selected template", () =>
+            {
+                var template = workspace.Selected!;
+                var subject = template.Subject;
+                template.Subject = "Unique search subject"; workspace.Search = "Unique search subject"; Pump();
+                Find<TokenEditor>(window, "SubjectEditor").SelectAll();
+                Find<TokenEditor>(window, "SubjectEditor").ReplaceSelection("Revised subject"); Pump();
+                Require(workspace.Selected == template && workspace.CanOpen, workspace.Validation);
+                template.Subject = subject; workspace.Search = ""; Pump();
             });
             EditorChecks.Run(window, workspace, app, Check, Pump, Capture, output);
             Capture(window, Path.Combine(output, "editor.png"));

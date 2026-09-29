@@ -34,6 +34,9 @@ scale. Keep runtime behavior offline and avoid web wrappers for this native app.
   repeated values, and save/restart. Reject stale/foreign variable drag payloads.
 - Existing templates remain compatible. Do not flatten chips to saved values.
 - Draft guards and all long-message fallbacks work without sending any mail.
+- Repeated draft requests validate fresh content without disabling the action.
+- Reset to variable names has undo; editing a filtered template keeps selection.
+- A new app version preserves an immutable original-library snapshot before saves.
 - Autosave and recovery protect data; no unsaved changes silently discarded.
 - English/Finnish content and Unicode survive store and draft round trips.
 - README explains running, use, backup/recovery, privacy, and distribution.

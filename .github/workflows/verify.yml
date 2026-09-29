@@ -26,5 +26,5 @@ jobs:
         with:
           name: Templator-win-x64
           path: |
-            artifacts/Templator-portable-win-x64.zip
+            artifacts/Templator.v*-portable.zip
             artifacts/ui/*.png

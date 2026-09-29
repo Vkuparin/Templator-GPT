@@ -15,6 +15,7 @@ public sealed class Workspace : Observable, IDisposable
     private readonly StoreData data;
     private readonly DispatcherTimer saveTimer;
     private readonly HashSet<Variable> observedVariables = [];
+    private readonly Dictionary<Guid, Dictionary<string, string>> resetValues = [];
     private bool syncing;
     private bool dirty;
     private Template? selected;
@@ -24,6 +25,8 @@ public sealed class Workspace : Observable, IDisposable
     public Settings Settings => data.Settings;
     public string DataFolder => store.Folder;
     public bool HasSelection => Selected != null;
+    public bool HasValues => Selected?.Variables.Any(v => v.Value.Length > 0) == true;
+    public bool CanUndoReset => Selected != null && resetValues.ContainsKey(Selected.Id);
     public string SaveStatus { get; private set => Set(ref field, value); } = "Saved locally";
     public string Notice { get; set => Set(ref field, value); } = "";
     public string Validation { get; private set => Set(ref field, value); } = "";
@@ -75,13 +78,19 @@ public sealed class Workspace : Observable, IDisposable
     private void TemplateChanged(object? sender, PropertyChangedEventArgs args)
     {
         if (syncing) return;
-        Sync(); Library.Refresh(); Changed();
+        // Refreshing a filtered collection while editing can remove the selected
+        // item and detach its editor. Refilter only when the search query changes.
+        Sync(); Changed();
     }
 
     private void VariablesChanged(object? sender, NotifyCollectionChangedEventArgs args)
     {
         ObserveVariables();
-        if (!syncing) Changed();
+        if (!syncing)
+        {
+            if (Selected != null) resetValues.Remove(Selected.Id);
+            Changed();
+        }
     }
 
     private void ObserveVariables()
@@ -98,6 +107,7 @@ public sealed class Workspace : Observable, IDisposable
     private void VariableChanged(object? sender, PropertyChangedEventArgs args)
     {
         if (syncing || Selected == null || sender is not Variable variable || args.PropertyName == nameof(Variable.Referenced)) return;
+        resetValues.Remove(Selected.Id);
         if (args.PropertyName == nameof(Variable.Value)) Selected.Values[variable.Key] = variable.Value;
         else variable.Customized = true;
         Changed();
@@ -113,6 +123,7 @@ public sealed class Workspace : Observable, IDisposable
 
     public void Refresh()
     {
+        Notify(nameof(HasValues)); Notify(nameof(CanUndoReset));
         if (Selected == null)
         {
             Validation = "Choose a template to start.";
@@ -175,6 +186,7 @@ public sealed class Workspace : Observable, IDisposable
         if (Selected == null) return;
         var index = Templates.IndexOf(Selected); var old = Selected;
         Selected = null; Templates.Remove(old);
+        resetValues.Remove(old.Id);
         Selected = Templates.ElementAtOrDefault(Math.Min(index, Templates.Count - 1)); Changed();
     }
 
@@ -188,9 +200,31 @@ public sealed class Workspace : Observable, IDisposable
 
     public void Reset()
     {
-        if (Selected == null) return;
-        foreach (var variable in Selected.Variables) variable.Value = "";
-        Selected.Values.Clear(); Sync(); Changed();
+        if (Selected == null || !HasValues) return;
+        resetValues[Selected.Id] = new(Selected.Values, StringComparer.Ordinal);
+        syncing = true;
+        try
+        {
+            foreach (var variable in Selected.Variables) variable.Value = "";
+            Selected.Values.Clear();
+        }
+        finally { syncing = false; }
+        Changed();
+        Notice = "Variables now show their names. Undo reset restores the previous values until you enter a new value or close Templator.";
+    }
+
+    public void UndoReset()
+    {
+        if (Selected == null || !resetValues.Remove(Selected.Id, out var values)) return;
+        syncing = true;
+        try
+        {
+            foreach (var variable in Selected.Variables)
+                variable.Value = values.GetValueOrDefault(variable.Key, "");
+            Selected.Values = values;
+        }
+        finally { syncing = false; }
+        Changed(); Notice = "Previous variable values restored.";
     }
 
     public Variable? AddVariable(string label, string example = "", bool required = true)
@@ -214,6 +248,7 @@ public sealed class Workspace : Observable, IDisposable
     public void DeleteVariable(Variable variable)
     {
         if (Selected == null) return;
+        resetValues.Remove(Selected.Id);
         string Remove(string source) => VariableSyntax.Pattern().Replace(source,
             match => match.Groups[1].Value == variable.Key ? "" : match.Value);
         syncing = true;

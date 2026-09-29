@@ -24,7 +24,8 @@ public partial class App : Application
             try { storeLock = store.AcquireLock(); }
             catch (IOException error)
             { throw new IOException("The workspace may already be open in another Templator window. Close it and try again. " + error.Message, error); }
-            var workspace = new Workspace(store, store.Load());
+            var version = typeof(App).Assembly.GetName().Version!.ToString(3);
+            var workspace = new Workspace(store, store.Load(version));
             MainWindow = new MainWindow(workspace);
             MainWindow.Show();
         }

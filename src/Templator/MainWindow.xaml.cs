@@ -91,8 +91,9 @@ public partial class MainWindow : Window
     }
     private void ResetValues(object sender, RoutedEventArgs e)
     {
-        if (Workspace.HasSelection && Confirm("Start with a clean form?", "Clear all saved values for this template. Its text and field definitions will stay.", "Reset values")) Workspace.Reset();
+        Workspace.Reset();
     }
+    private void UndoReset(object sender, RoutedEventArgs e) => Workspace.UndoReset();
     private void AddVariable(object sender, RoutedEventArgs e)
     {
         if (Workspace.Selected is not { } template) return;
@@ -182,7 +183,8 @@ public partial class MainWindow : Window
     private void OpenDraft(object sender, RoutedEventArgs e) => Run(() =>
     {
         Workspace.Refresh();
-        if (!Workspace.CanOpen || Workspace.Draft is not { } draft) return;
+        if (!Workspace.CanOpen || Workspace.Draft is not { } draft)
+        { Workspace.Notice = "Draft not opened. " + Workspace.Validation; return; }
         if (!Workspace.Flush()) return;
         if (draft.Mailto().Length <= Workspace.Settings.MailtoLengthThreshold)
         { Workspace.Notice = mail.Open(draft); return; }

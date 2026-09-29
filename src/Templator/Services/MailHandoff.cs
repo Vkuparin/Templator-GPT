@@ -17,7 +17,10 @@ public interface IMailPlatform
 public sealed class WindowsMailPlatform : IMailPlatform
 {
     public void Copy(string text) => Clipboard.SetDataObject(text, true);
-    public void Open(string target) => Process.Start(new ProcessStartInfo(target) { UseShellExecute = true });
+    public void Open(string target)
+    {
+        using var process = Process.Start(new ProcessStartInfo(target) { UseShellExecute = true });
+    }
 }
 
 public sealed class MailHandoff(IMailPlatform platform)
@@ -39,7 +42,7 @@ public sealed class MailHandoff(IMailPlatform platform)
         {
             platform.Open(draft.Mailto(!headersOnly));
             return headersOnly ? "Draft requested. Paste the copied body, then review in your mail app."
-                : "Draft requested in your mail app. Review all fields before sending.";
+                : "Draft requested. Edit here and choose Open draft again whenever you need a fresh copy. Review in your mail app before sending.";
         }
         catch (Exception e) when (e is Win32Exception or InvalidOperationException)
         {
