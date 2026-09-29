@@ -9,7 +9,7 @@
         <TextBox x:Name="DefaultTo" AutomationProperties.Name="Default To"/>
         <TextBlock Text="Default Cc" Style="{StaticResource Caption}" Margin="0,14,0,6"/>
         <TextBox x:Name="DefaultCc" AutomationProperties.Name="Default Cc"/>
-        <TextBlock Text="Used only for new templates. Existing and reset values stay as you left them." Style="{StaticResource Caption}" Margin="0,10,0,20"/>
+        <TextBlock Text="Prefills To and Cc in new emails. Existing templates and saved variable values stay as you left them." Style="{StaticResource Caption}" Margin="0,10,0,20"/>
         <TextBlock Text="Long-draft warning (URL characters)" Style="{StaticResource Caption}"/>
         <TextBox x:Name="Threshold" AutomationProperties.Name="Mailto length threshold"/>
         <TextBlock Text="Default: 1,800. Client limits vary; this is a precaution, not a guarantee." Style="{StaticResource Caption}" Margin="0,10,0,0"/>

@@ -65,15 +65,7 @@ internal static class Program
                 Require(platform.Opened.Single().StartsWith("mailto:sap-team%40example.com"));
                 workspace.Notice = "";
             });
-            Check("Editing source creates and prunes inputs through WPF binding", () =>
-            {
-                Find<TabControl>(window, "ModeTabs").SelectedIndex = 1; Pump();
-                var body = Find<TextBox>(window, "BodyEditor");
-                var original = body.Text; body.Text += "\nReference: {{project_ref}}"; Pump();
-                Require(workspace.Selected!.Variables.Any(v => v.Key == "project_ref"));
-                Require(!workspace.CanOpen); body.Text = original; Pump();
-                Require(workspace.Selected.Variables.All(v => v.Key != "project_ref"));
-            });
+            EditorChecks.Run(window, workspace, app, Check, Pump, Capture, output);
             Capture(window, Path.Combine(output, "editor.png"));
             Check("Language selection updates metadata without translating content", () =>
             {
@@ -84,7 +76,7 @@ internal static class Program
             });
             Check("Custom definitions, metadata, and unreferenced state persist", () =>
             {
-                workspace.NewKey = "{{cost_center}}"; workspace.AddVariable();
+                workspace.AddVariable("Cost center", "1002");
                 var v = workspace.Selected!.Variables.Single(v => v.Key == "cost_center");
                 v.Label = "Cost center"; v.Example = "1002"; v.Required = true;
                 Require(!v.Referenced && workspace.CanOpen); Require(workspace.Flush());
@@ -126,7 +118,7 @@ internal static class Program
             });
             Check("Defaults prefill only new templates", () =>
             {
-                workspace.NewTemplate(); Require(workspace.Selected!.Values["recipient"] == "local@example.com");
+                workspace.NewTemplate(); Require(workspace.Selected!.To == "local@example.com" && workspace.Selected.Variables.Count == 0);
                 workspace.Reset(); Require(workspace.Selected.Values.Count == 0);
             });
             Check("Failed save preserves the old file and allows retry", () =>
@@ -211,7 +203,7 @@ internal static class Program
                 }, DispatcherPriority.ApplicationIdle);
                 Require(dialog.ShowDialog() == true && settings.MailtoLengthThreshold == 2000 && settings.DefaultTo == "team@example.com");
             });
-            workspace.Notice = ""; workspace.Selected = workspace.Templates[0]; workspace.EditorMode = 0;
+            workspace.Notice = ""; workspace.Selected = workspace.Templates[0];
             window.Width = 1050; window.Height = 680; Pump();
             Capture(window, Path.Combine(output, "compact.png"));
             Check("Minimum window keeps action and preview in bounds", () =>

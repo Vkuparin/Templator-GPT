@@ -36,9 +36,9 @@ Check("Keys are ASCII, case-sensitive, and strictly anchored", () =>
     var t = Template("{{ID}} {{id}} {{a_b9}} {{bad-key}} {{ä}}"); VariableSyntax.Synchronize(t);
     Equal(3, t.Variables.Count); True(!VariableSyntax.KeyPattern().IsMatch("key\n"));
 });
-Check("Prune unused automatic definitions", () =>
+Check("Unused definitions stay available for reuse and undo", () =>
 {
-    var t = Template("{{foo}}"); VariableSyntax.Synchronize(t); t.Body = ""; VariableSyntax.Synchronize(t); Equal(0, t.Variables.Count);
+    var t = Template("{{foo}}"); VariableSyntax.Synchronize(t); t.Body = ""; VariableSyntax.Synchronize(t); Equal(1, t.Variables.Count); True(!t.Variables[0].Referenced);
 });
 Check("Preserve customized and filled unused definitions without blocking", () =>
 {
@@ -185,6 +185,13 @@ Check("Serialized document excludes transient preview values", () =>
 {
     var t = Samples.Sap(); t.Variables[0].Value = "transient";
     var json = JsonSerializer.Serialize(Data(t), TemplateStore.Json); True(!json.Contains("transient")); True(!json.Contains("referenced"));
+});
+Check("Friendly names generate safe, unique internal keys", () =>
+{
+    Equal("customer_name", VariableNaming.NewKey("Customer name", []));
+    Equal("paivamaara", VariableNaming.NewKey("Päivämäärä", []));
+    Equal("customer_name_3", VariableNaming.NewKey("Customer name", ["customer_name", "customer_name_2"]));
+    Equal("field", VariableNaming.NewKey("项目", []));
 });
 Console.WriteLine($"\n{passed} passed; {failed} failed. Test data: {root}");
 return failed == 0 ? 0 : 1;

@@ -7,8 +7,8 @@ Do not inspect or depend on the source or data of the older Templator project.
 ## Priorities
 
 1. Reliable local data and safe draft handoff. Never send email.
-2. A focused compose flow with a readable live preview.
-3. GUI editing of every template field and variable definition.
+2. One directly editable email surface with named, draggable variable chips.
+3. Friendly variable creation; no visible placeholder syntax or technical keys.
 4. Clear behavior on invalid data, missing mail handlers, and failed saves.
 5. Small dependencies and straightforward, testable architecture.
 
@@ -28,7 +28,11 @@ scale. Keep runtime behavior offline and avoid web wrappers for this native app.
 
 - Release build clean with warnings treated as errors.
 - Core regression suite and WPF binding/lifecycle checks pass.
-- Compose, edit, CRUD, search/reorder, import/export, reset, and settings work.
+- Direct To/Cc/subject/body editing, named variable creation, drag/drop, click
+  insertion, value editing, CRUD, import/export, reset, and settings work.
+- Chip identity survives undo/redo, selection deletion, same-template paste,
+  repeated values, and save/restart. Reject stale/foreign variable drag payloads.
+- Existing templates remain compatible. Do not flatten chips to saved values.
 - Draft guards and all long-message fallbacks work without sending any mail.
 - Autosave and recovery protect data; no unsaved changes silently discarded.
 - English/Finnish content and Unicode survive store and draft round trips.

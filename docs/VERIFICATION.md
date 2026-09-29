@@ -1,6 +1,6 @@
 # Verification record
 
-Verified locally on 29 September 2026, Windows 11 x64, .NET SDK 10.0.401.
+Version 1.1.0 verified locally on 29 September 2026, Windows 11 x64, .NET SDK 10.0.401.
 This is a fresh implementation in Templator-GPT; no source or user data from the
 older Templator application was read.
 
@@ -9,28 +9,37 @@ older Templator application was read.
 `./scripts/Verify.ps1` completed successfully:
 
 - Release solution build: **0 warnings, 0 errors**.
-- Core regression suite: **34 passed, 0 failed**.
-- WPF UI/integration suite: **24 passed, 0 failed**.
+- Core regression suite: **35 passed, 0 failed**.
+- WPF UI/integration suite: **44 passed, 0 failed**.
 - WPF binding trace: **no errors**.
 
 Core checks cover all-field discovery, required/optional and unused variables,
-pruning/retention, nonrecursive rendering, Unicode, recipient and header
+retention, friendly-name key generation, nonrecursive rendering, Unicode, recipient and header
 validation, URI/MIME round trips, MIME folding, atomic replacement, previous-save
 backups, corruption preservation, unsupported versions, locking, clone isolation,
 structural/size validation, and source-file preservation.
 
-WPF checks use actual TextBoxes, buttons, bindings, radio buttons, settings and
-long-draft dialogs. They exercise compose/edit, field creation, definition edits,
-search, clone/reorder/delete, empty library, import/export, reset/defaults,
-save/restart, failed-save retry, both URI fallbacks, MIME file persistence, and
-fake clipboard/handler failures. No email client or delivery is invoked.
+WPF checks use actual controls, FlowDocuments, buttons, bindings, radio buttons,
+variable creation/value dialogs, settings, and long-draft dialogs. They cover:
 
-Screenshots rendered from actual WPF controls were inspected at 1360×880 and
-1050×680 logical window sizes. Compose, editor, empty state, long-draft dialog,
-and settings were inspected. This caught and fixed window-theme inheritance,
-input spacing, preview scrolling, and screenshot clipping issues that functional
-checks alone did not reveal. Reference images in `docs/images` contain only
-fictional example data.
+- Direct To/Cc/subject/body editing and blank new-template behavior.
+- Friendly variable creation, human labels, required/unused status, and rename.
+- Position-based dropping between words using the same coordinate/hit-test path
+  as the drop handler, insertion into all four fields, and palette click insertion.
+- Repeated chip values, preserved caret/document/undo state on value changes.
+- Backspace, selected-chip deletion, undo/redo, and clicking a restored chip.
+- Internal semantic clipboard data, resolved external text, partial selection,
+  plain-text paste, paragraph/soft-break round trips, and header newline handling.
+- Foreign/stale drag rejection, cross-template paste, and removed definitions.
+- Existing placeholder whitespace, semantic save/restart, and all-use deletion.
+- Search, clone/reorder/delete, empty library, import/export, reset/defaults,
+  failed-save retry, URI fallbacks, MIME persistence, fake clipboard/handler errors.
+
+No email client or delivery is invoked. The shared drop logic and rendered
+coordinates are automated; a physical mouse/OLE drag gesture was not driven.
+Screenshots from actual WPF controls were inspected at 1360×880 and 1050×680
+logical window sizes, including the new variable dialog. Reference images contain
+fictional data only. Caption wrapping was corrected during visual inspection.
 
 ## Packaged executable checks
 
@@ -43,8 +52,8 @@ for their main window, and closed through the normal window-close path:
 
 | Package | EXE size | Time to detected window | Exit code |
 | --- | ---: | ---: | ---: |
-| Portable (Desktop Runtime required) | 272,119 bytes | 582 ms | 0 |
-| Standalone (runtime included) | 139,806,325 bytes | 614 ms | 0 |
+| Portable (Desktop Runtime required) | 302,327 bytes | 691 ms | 0 |
+| Standalone (runtime included) | 139,836,533 bytes | 680 ms | 0 |
 
 These are single observations on this machine, not performance guarantees.
 Standalone first-run extraction and slower machines can take longer.

@@ -5,32 +5,24 @@
         Title="Templator — a little less repetition" Style="{StaticResource {x:Type Window}}" Width="1360" Height="880" MinWidth="1050" MinHeight="680"
         WindowStartupLocation="CenterScreen" PreviewKeyDown="OnShortcut" Closing="OnClosing">
     <Window.Resources>
-        <DataTemplate x:Key="InputRow">
-            <StackPanel Margin="0,0,10,9">
-                <StackPanel Orientation="Horizontal" Margin="0,0,0,7">
-                    <TextBlock Text="{Binding Label}" FontWeight="Medium"/>
-                    <TextBlock Text=" *" Foreground="{StaticResource Accent}" Visibility="{Binding Required, Converter={StaticResource Visible}}"/>
-                </StackPanel>
-                <TextBox Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}" Tag="{Binding Example}" AutomationProperties.Name="{Binding Label}"
-                         AcceptsReturn="True" TextWrapping="Wrap" MaxHeight="120" VerticalScrollBarVisibility="Auto"/>
-                <TextBlock Text="Not used in this template" FontSize="11" Foreground="{StaticResource Muted}" Margin="0,5,0,0">
-                    <TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding Referenced}" Value="False"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></TextBlock.Style>
-                </TextBlock>
-            </StackPanel>
-        </DataTemplate>
-        <DataTemplate x:Key="DefinitionRow">
-            <Border BorderBrush="{StaticResource Line}" BorderThickness="0,0,0,1" Padding="0,12">
+        <DataTemplate x:Key="VariableCard">
+            <Border BorderBrush="{StaticResource Line}" BorderThickness="0,0,0,1" Padding="0,0,0,15" Margin="0,0,10,16">
                 <StackPanel>
-                    <DockPanel Margin="0,0,0,8">
-                        <Button DockPanel.Dock="Right" Content="Remove" Style="{StaticResource Quiet}" Click="DeleteVariable" Tag="{Binding}" ToolTip="Remove definition and saved value"/>
-                        <TextBlock Text="{Binding Key}" FontFamily="Cascadia Mono, Consolas" Foreground="{StaticResource Accent}" VerticalAlignment="Center"/>
+                    <DockPanel Margin="0,0,0,9">
+                        <Button DockPanel.Dock="Right" Content="Edit" Click="EditVariable" Tag="{Binding}" Style="{StaticResource Quiet}" Padding="5,6" FontSize="11" ToolTip="Rename, set a hint, or delete this variable"/>
+                        <Button Tag="{Binding}" Click="InsertVariable" PreviewMouseLeftButtonDown="ChipMouseDown" PreviewMouseMove="ChipMouseMove"
+                                Padding="9,5" HorizontalAlignment="Left" Background="#294438" BorderBrush="#4B6B56" Foreground="{StaticResource Accent}"
+                                ToolTip="Drag into your email, or click to insert at the cursor" AutomationProperties.Name="{Binding Label}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="⠿" Margin="0,0,7,0"/>
+                                <TextBlock Text="{Binding Label}" FontSize="12" MaxWidth="165" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"/>
+                                <TextBlock Text=" *" FontSize="12" Visibility="{Binding Required, Converter={StaticResource Visible}}"/>
+                            </StackPanel>
+                        </Button>
                     </DockPanel>
-                    <TextBlock Text="Display label" Style="{StaticResource Caption}"/>
-                    <TextBox Text="{Binding Label, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Variable display label"/>
-                    <TextBlock Text="Example hint" Style="{StaticResource Caption}" Margin="0,10,0,6"/>
-                    <TextBox Text="{Binding Example, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Variable example hint"/>
-                    <CheckBox Content="Required" IsChecked="{Binding Required}"/>
-                    <TextBlock Text="Unreferenced · retained for later" FontSize="11" Foreground="{StaticResource Muted}">
+                    <TextBox Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}" Tag="{Binding Example}" AutomationProperties.Name="{Binding Label}"
+                             AcceptsReturn="True" TextWrapping="Wrap" MaxHeight="120" VerticalScrollBarVisibility="Auto" FontSize="13"/>
+                    <TextBlock Text="Not in this email yet · drag to insert" FontSize="10" Foreground="{StaticResource Muted}" Margin="0,7,0,0">
                         <TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding Referenced}" Value="False"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></TextBlock.Style>
                     </TextBlock>
                 </StackPanel>
@@ -38,20 +30,18 @@
         </DataTemplate>
     </Window.Resources>
     <Grid Background="{StaticResource Canvas}">
-        <Grid.ColumnDefinitions><ColumnDefinition Width="236"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+        <Grid.ColumnDefinitions><ColumnDefinition Width="220"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
         <Border Background="{StaticResource Sidebar}" BorderBrush="{StaticResource Line}" BorderThickness="0,0,1,0">
             <Grid Margin="18,26,18,18">
                 <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
                 <StackPanel Margin="6,0,0,30">
                     <StackPanel Orientation="Horizontal">
-                        <Border Width="29" Height="29" CornerRadius="7" Background="{StaticResource Accent}" Margin="0,0,10,0">
-                            <TextBlock Text="t." Foreground="#15291F" FontSize="23" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,-3,0,0"/>
-                        </Border>
+                        <Border Width="29" Height="29" CornerRadius="7" Background="{StaticResource Accent}" Margin="0,0,10,0"><TextBlock Text="t." Foreground="#15291F" FontSize="23" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,-3,0,0"/></Border>
                         <TextBlock Text="templator" FontSize="23" FontWeight="SemiBold"/>
                     </StackPanel>
                     <TextBlock Text="A LITTLE LESS REPETITION" FontSize="9" Foreground="{StaticResource Muted}" Margin="0,12,0,0"/>
                 </StackPanel>
-                <TextBox x:Name="SearchBox" Grid.Row="1" Tag="Search templates   Ctrl+F" Text="{Binding Search, UpdateSourceTrigger=PropertyChanged}" FontSize="12" Margin="0,0,0,20" AutomationProperties.Name="Search templates"/>
+                <TextBox x:Name="SearchBox" Grid.Row="1" Tag="Search templates   Ctrl+F" Text="{Binding Search, UpdateSourceTrigger=PropertyChanged}" FontSize="11" Margin="0,0,0,20" AutomationProperties.Name="Search templates"/>
                 <DockPanel Grid.Row="2" Margin="4,0,0,12">
                     <Button x:Name="NewButton" DockPanel.Dock="Right" Content="+ New" Padding="9,6" Click="NewTemplate" ToolTip="New template · Ctrl+N"/>
                     <TextBlock Text="YOUR LIBRARY" Style="{StaticResource Eyebrow}" VerticalAlignment="Center" Margin="0"/>
@@ -61,30 +51,32 @@
                     <ListBox.ItemTemplate><DataTemplate>
                         <StackPanel>
                             <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="SemiBold" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"/>
-                            <TextBlock Text="{Binding Subject}" Foreground="{StaticResource Muted}" FontSize="11" Margin="0,6,0,0" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"/>
-                            <TextBlock Text="{Binding Language}" Foreground="{StaticResource Accent}" FontSize="10" Margin="0,9,0,0"/>
+                            <TextBlock Foreground="{StaticResource Muted}" FontSize="11" Margin="0,9,0,0">
+                                <TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Text" Value="English · Email template"/><Style.Triggers><DataTrigger Binding="{Binding Language}" Value="fi"><Setter Property="Text" Value="Suomi · Email template"/></DataTrigger></Style.Triggers></Style></TextBlock.Style>
+                            </TextBlock>
                         </StackPanel>
                     </DataTemplate></ListBox.ItemTemplate>
                 </ListBox>
                 <StackPanel Grid.Row="4">
                     <Separator/>
                     <UniformGrid Columns="2"><Button Content="Import" Style="{StaticResource Quiet}" Click="Import"/><Button Content="Export" Style="{StaticResource Quiet}" Click="Export"/></UniformGrid>
-                    <Button Content="Settings" Style="{StaticResource Quiet}" Click="Settings" HorizontalContentAlignment="Left"/>
+                    <Button Content="Settings" Style="{StaticResource Quiet}" Click="Settings"/>
                     <TextBlock Text="●  Local workspace" Foreground="{StaticResource Accent}" FontSize="11" Margin="10,20,0,0"/>
                     <TextBlock Text="{Binding SaveStatus}" Foreground="{StaticResource Muted}" FontSize="11" Margin="10,6,0,0"/>
                 </StackPanel>
             </Grid>
         </Border>
-        <Grid Grid.Column="1" Margin="30,26,30,20">
+        <Grid Grid.Column="1" Margin="26,24,26,20">
             <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-            <DockPanel Margin="0,0,0,20">
+            <DockPanel Margin="0,0,0,22">
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center" IsEnabled="{Binding HasSelection}">
                     <Button Content="Duplicate" Style="{StaticResource Quiet}" Click="Duplicate"/>
                     <Button Content="Delete" Style="{StaticResource Quiet}" Click="DeleteTemplate"/>
                 </StackPanel>
                 <StackPanel>
-                    <TextBlock Text="MAIL, MADE REPEATABLE" Style="{StaticResource Eyebrow}"/>
-                    <TextBlock Text="{Binding Selected.Name, TargetNullValue=Your next email starts here}" FontSize="25" FontWeight="SemiBold" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock Text="MAKE YOURSELF AT HOME" Style="{StaticResource Eyebrow}" Margin="2,0,0,4"/>
+                    <TextBox x:Name="NameEditor" Text="{Binding Selected.Name, UpdateSourceTrigger=PropertyChanged}" Tag="Your next email starts here" FontSize="24" FontWeight="SemiBold"
+                             Background="Transparent" BorderThickness="0" Padding="2,4" IsEnabled="{Binding HasSelection}" AutomationProperties.Name="Template name" ToolTip="Click to rename your template"/>
                 </StackPanel>
             </DockPanel>
             <Border Grid.Row="1" Background="#27382F" CornerRadius="6" Padding="12" Margin="0,0,0,16">
@@ -93,76 +85,66 @@
             </Border>
             <Grid Grid.Row="2">
                 <Grid.Style><Style TargetType="Grid"><Setter Property="Visibility" Value="Visible"/><Style.Triggers><DataTrigger Binding="{Binding HasSelection}" Value="False"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers></Style></Grid.Style>
-                <Grid.ColumnDefinitions><ColumnDefinition Width="0.85*" MinWidth="275"/><ColumnDefinition Width="28"/><ColumnDefinition Width="1.15*" MinWidth="300"/></Grid.ColumnDefinitions>
-                <TabControl x:Name="ModeTabs" SelectedIndex="{Binding EditorMode}">
-                    <TabItem Header="Compose">
-                        <Grid TextElement.Foreground="{StaticResource Ink}">
-                            <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-                            <TextBlock Text="Make it yours." FontSize="20" FontWeight="SemiBold" Margin="0,0,0,8"/>
-                            <TextBlock Grid.Row="1" Text="Fill in the details. Your preview updates as you type." Foreground="{StaticResource Muted}" FontSize="12" Margin="0,0,0,22"/>
-                            <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto"><ItemsControl x:Name="ValueInputs" ItemsSource="{Binding Selected.Variables}" ItemTemplate="{StaticResource InputRow}"/></ScrollViewer>
-                            <DockPanel Grid.Row="3" Margin="0,12,0,0"><Button DockPanel.Dock="Right" Content="Reset values" Style="{StaticResource Quiet}" Click="ResetValues"/><TextBlock Text="{Binding Progress}" Foreground="{StaticResource Muted}" FontSize="11" VerticalAlignment="Center"/></DockPanel>
-                        </Grid>
-                    </TabItem>
-                    <TabItem Header="Edit template">
-                        <ScrollViewer VerticalScrollBarVisibility="Auto">
-                            <StackPanel Margin="0,0,10,0" TextElement.Foreground="{StaticResource Ink}">
-                                <TextBlock Text="Build once. Reuse often." FontSize="20" FontWeight="SemiBold" Margin="0,0,0,8"/>
-                                <TextBlock Text="Use {{variables}} anywhere in the message." Foreground="{StaticResource Muted}" FontSize="12" Margin="0,0,0,22"/>
-                                <TextBlock Text="Template name" Style="{StaticResource Caption}"/>
-                                <TextBox x:Name="NameEditor" Text="{Binding Selected.Name, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Template name"/>
-                                <StackPanel Orientation="Horizontal" Margin="0,4,0,12">
-                                    <RadioButton x:Name="EnglishRadio" Content="English" GroupName="Language" Checked="LanguageChanged"/>
-                                    <RadioButton x:Name="FinnishRadio" Content="Suomi" GroupName="Language" Checked="LanguageChanged"/>
-                                </StackPanel>
-                                <TextBlock Text="To" Style="{StaticResource Caption}"/><TextBox Text="{Binding Selected.To, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="To template"/>
-                                <TextBlock Text="Cc" Style="{StaticResource Caption}" Margin="0,12,0,6"/><TextBox Text="{Binding Selected.Cc, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Cc template"/>
-                                <TextBlock Text="Subject" Style="{StaticResource Caption}" Margin="0,12,0,6"/><TextBox x:Name="SubjectEditor" Text="{Binding Selected.Subject, UpdateSourceTrigger=PropertyChanged}" TextWrapping="Wrap" AutomationProperties.Name="Subject template"/>
-                                <TextBlock Text="Message" Style="{StaticResource Caption}" Margin="0,12,0,6"/>
-                                <TextBox x:Name="BodyEditor" Text="{Binding Selected.Body, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" TextWrapping="Wrap" Height="230" VerticalScrollBarVisibility="Auto" FontFamily="Cascadia Mono, Consolas" FontSize="12" VerticalContentAlignment="Top" AutomationProperties.Name="Message template"/>
-                                <Separator/>
-                                <TextBlock Text="Variable definitions" FontSize="17" FontWeight="SemiBold" Margin="0,0,0,8"/>
-                                <TextBlock Text="Typing a placeholder creates its field automatically. Customize it below, or add one for later." Style="{StaticResource Caption}"/>
-                                <DockPanel Margin="0,6,0,0"><Button DockPanel.Dock="Right" Content="Add" Click="AddVariable" Margin="8,0,0,0"/><TextBox Text="{Binding NewKey, UpdateSourceTrigger=PropertyChanged}" Tag="new_variable" AutomationProperties.Name="New variable key"/></DockPanel>
-                                <ItemsControl ItemsSource="{Binding Selected.Variables}" ItemTemplate="{StaticResource DefinitionRow}"/>
-                            </StackPanel>
-                        </ScrollViewer>
-                    </TabItem>
-                </TabControl>
-                <Grid Grid.Column="2" Margin="0,0,0,4">
-                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-                    <DockPanel Margin="0,11,0,22">
-                        <TextBlock DockPanel.Dock="Right" Text="LIVE PREVIEW" Foreground="{StaticResource Accent}" FontSize="10"/>
-                        <TextBlock Text="02  /  REVIEW" Style="{StaticResource Eyebrow}" Margin="0"/>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="280"/><ColumnDefinition Width="24"/><ColumnDefinition Width="*" MinWidth="330"/></Grid.ColumnDefinitions>
+                <Grid>
+                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                    <DockPanel Margin="0,0,0,10">
+                        <Button x:Name="AddVariableButton" DockPanel.Dock="Right" Content="+ New" Click="AddVariable" Padding="10,6" ToolTip="Create a reusable variable"/>
+                        <TextBlock Text="Variables" FontSize="21" FontWeight="SemiBold" VerticalAlignment="Center"/>
                     </DockPanel>
-                    <Border Grid.Row="1" Background="#F4F2EB" CornerRadius="9" Padding="28,26">
+                    <TextBlock Grid.Row="1" Text="Drag a name into your email. Fill its value below, or click a chip on the page." Foreground="{StaticResource Muted}" FontSize="12" Margin="0,0,8,20"/>
+                    <Grid Grid.Row="2">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto"><ItemsControl x:Name="ValueInputs" ItemsSource="{Binding Selected.Variables}" ItemTemplate="{StaticResource VariableCard}"/></ScrollViewer>
+                        <StackPanel Margin="8,24,8,0" VerticalAlignment="Top">
+                            <StackPanel.Style><Style TargetType="StackPanel"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding Selected.Variables.Count}" Value="0"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></StackPanel.Style>
+                            <TextBlock Text="A name. A value. Anywhere." FontSize="17" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                            <TextBlock Text="Create a variable for a detail you reuse, like a customer or an order number. Then drag it into place." Foreground="{StaticResource Muted}" FontSize="12"/>
+                            <Button Content="+ Create your first variable" Click="AddVariable" Margin="0,20,0,0"/>
+                        </StackPanel>
+                    </Grid>
+                    <DockPanel Grid.Row="3" Margin="0,10,0,0"><Button DockPanel.Dock="Right" Content="Reset values" Style="{StaticResource Quiet}" Click="ResetValues" FontSize="12"/><TextBlock Text="{Binding Progress}" Foreground="{StaticResource Muted}" FontSize="11" VerticalAlignment="Center"/></DockPanel>
+                </Grid>
+                <Grid Grid.Column="2">
+                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                    <DockPanel Margin="0,5,0,14">
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                            <RadioButton x:Name="EnglishRadio" Content="English" GroupName="Language" Checked="LanguageChanged" FontSize="11" Margin="0,0,12,0"/>
+                            <RadioButton x:Name="FinnishRadio" Content="Suomi" GroupName="Language" Checked="LanguageChanged" FontSize="11" Margin="0"/>
+                        </StackPanel>
+                        <TextBlock Text="YOUR EMAIL  /  CLICK TO EDIT" Style="{StaticResource Eyebrow}" Margin="0" VerticalAlignment="Center"/>
+                    </DockPanel>
+                    <Border Grid.Row="1" Background="#F4F2EB" CornerRadius="9" Padding="24,22">
                         <Grid>
                             <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-                            <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
-                            <StackPanel>
-                            <StackPanel>
-                                <TextBlock Text="EMAIL DRAFT" Foreground="#65756C" FontSize="10" FontWeight="SemiBold" Margin="0,0,0,24"/>
-                                <Grid Margin="0,0,0,10"><Grid.ColumnDefinitions><ColumnDefinition Width="34"/><ColumnDefinition/></Grid.ColumnDefinitions><TextBlock Text="To" Foreground="#66736B" FontSize="12"/><TextBlock Grid.Column="1" Text="{Binding Draft.To}" Foreground="#334139" FontSize="12"/></Grid>
-                                <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="34"/><ColumnDefinition/></Grid.ColumnDefinitions><TextBlock Text="Cc" Foreground="#66736B" FontSize="12"/><TextBlock Grid.Column="1" Text="{Binding Draft.Cc}" Foreground="#334139" FontSize="12"/></Grid>
-                            </StackPanel>
-                            <Border Height="1" Background="#D7DCD3" Margin="0,22,0,20"/>
-                            <TextBlock Text="{Binding Draft.Subject}" Foreground="#24352B" FontSize="22" FontWeight="SemiBold" Margin="0,0,0,22"/>
-                            <views:PreviewText x:Name="BodyPreview" AutomationProperties.Name="Rendered message preview"/>
-                            </StackPanel>
+                            <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,6,0" PreviewDragOver="ScrollWhileDragging">
+                                <StackPanel>
+                                    <TextBlock Text="EMAIL DRAFT" Foreground="#65756C" FontSize="10" FontWeight="SemiBold" Margin="0,0,0,16"/>
+                                    <Grid Margin="0,0,0,6"><Grid.ColumnDefinitions><ColumnDefinition Width="34"/><ColumnDefinition/></Grid.ColumnDefinitions><TextBlock Text="To" Foreground="#66736B" FontSize="12" Margin="0,10,0,0"/><views:TokenEditor x:Name="ToEditor" Grid.Column="1" SingleLine="True" FontSize="13" AutomationProperties.Name="To" ToolTip="Type recipients, or drop a variable here"/></Grid>
+                                    <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="34"/><ColumnDefinition/></Grid.ColumnDefinitions><TextBlock Text="Cc" Foreground="#66736B" FontSize="12" Margin="0,10,0,0"/><views:TokenEditor x:Name="CcEditor" Grid.Column="1" SingleLine="True" FontSize="13" AutomationProperties.Name="Cc" ToolTip="Type optional recipients, or drop a variable here"/></Grid>
+                                    <TextBlock Text="SUBJECT" Foreground="#65756C" FontSize="10" Margin="0,20,0,2"/>
+                                    <views:TokenEditor x:Name="SubjectEditor" SingleLine="True" FontSize="20" FontWeight="SemiBold" AutomationProperties.Name="Subject" ToolTip="Write your subject here. Variables work here too."/>
+                                    <TextBlock Text="MESSAGE" Foreground="#65756C" FontSize="10" Margin="0,20,0,4"/>
+                                    <Grid>
+                                        <views:TokenEditor x:Name="BodyEditor" MinHeight="210" BorderThickness="0" AutomationProperties.Name="Message" ToolTip="Write and edit your message here. Drop variables between words."/>
+                                        <TextBlock Text="Write your message here…" Foreground="#859084" FontSize="15" Margin="7,10,0,0" IsHitTestVisible="False" VerticalAlignment="Top">
+                                            <TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding Selected.Body}" Value=""><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></TextBlock.Style>
+                                        </TextBlock>
+                                    </Grid>
+                                </StackPanel>
                             </ScrollViewer>
-                            <TextBlock Grid.Row="1" Text="Prepared here. Sent by you." Foreground="#66766A" FontSize="11" Margin="0,22,0,0"/>
+                            <TextBlock Grid.Row="1" Text="Prepared here. Sent by you." Foreground="#66766A" FontSize="11" Margin="0,16,0,0"/>
                         </Grid>
                     </Border>
-                    <TextBlock Grid.Row="2" Text="Your mail app opens for a final review. Nothing is sent automatically." Foreground="{StaticResource Muted}" FontSize="11" Margin="2,14,0,0"/>
+                    <TextBlock Grid.Row="2" Text="Edits update this template automatically. Variable chips become plain text in your mail app." Foreground="{StaticResource Muted}" FontSize="11" Margin="2,12,0,0"/>
                 </Grid>
             </Grid>
             <StackPanel Grid.Row="2" HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="410">
                 <StackPanel.Style><Style TargetType="StackPanel"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding HasSelection}" Value="False"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></StackPanel.Style>
                 <TextBlock Text="A good email, on repeat." FontSize="28" FontWeight="SemiBold" TextAlignment="Center"/>
-                <TextBlock Text="Create a template or choose one from your library. The repetitive parts are taken care of." Foreground="{StaticResource Muted}" TextAlignment="Center" Margin="0,16,0,24"/>
+                <TextBlock Text="Create a template or choose one from your library. Write directly on the page, then add reusable details." Foreground="{StaticResource Muted}" TextAlignment="Center" Margin="0,16,0,24"/>
                 <Button Content="+ Create a template" Style="{StaticResource Primary}" Click="NewTemplate" HorizontalAlignment="Center"/>
             </StackPanel>
-            <Grid Grid.Row="3" Margin="0,20,0,0">
+            <Grid Grid.Row="3" Margin="0,18,0,0">
                 <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
                 <TextBlock Text="{Binding Validation}" FontSize="12" Foreground="{StaticResource Muted}" Margin="0,0,0,12"/>
                 <DockPanel Grid.Row="1">

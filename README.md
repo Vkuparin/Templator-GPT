@@ -24,16 +24,37 @@ dotnet run --project src/Templator
 
 ## Use
 
-1. Choose the English or Finnish SAP starter, or create a template.
-2. In **Compose**, fill the required fields. Values are remembered per template.
-3. Review the paper preview, then choose **Open draft**. Review again in Outlook
-   or your default mail app and send there yourself.
+1. Choose an English or Finnish starter, or create a blank email template.
+2. Click **To**, **Cc**, **Subject**, or the **Message** on the paper to edit it
+   directly. Click the template title to rename it. Edits save automatically.
+3. Under **Variables**, choose **+ New** and enter a friendly name such as
+   “Customer name.” An example hint and required flag are optional settings.
+4. **Drag the variable's name into the email** at the desired position. You can
+   use it in the message, subject, To, or Cc. Alternatively, place the text cursor
+   first and click the variable's name to insert it there.
+5. Fill its value in the palette, or **click a chip in the email**. Every use of
+   that variable updates together. Then choose **Open draft** and review in your
+   own mail app before sending.
 
-**Edit template** changes the name, language, recipients, subject, and message.
-Type `{{customer_name}}` in any message field to create a variable. Customize
-its label, example hint, and required flag below the source editor. Keys are
-case-sensitive letters, digits, and underscores. The language setting is
-metadata; it does not translate your text. The interface is in English.
+No placeholder syntax is needed. Empty chips show their names; filled chips show
+actual values. Required empty chips are amber. Optional empty chips remain visible
+so you can edit them, but contribute no text to the outgoing email.
+
+Use **Edit** beside a variable to rename it, change its hint/required setting, or
+delete it. Removing a chip from the email keeps the variable available for later.
+Deleting the variable itself asks for confirmation and removes all its uses and
+saved value. Unused variables never block opening a draft.
+
+The email editor supports ordinary text editing, selection, undo/redo, and paste.
+Chips behave as single editable objects: Backspace removes a whole chip, and undo
+restores it. Copying text to another app uses the filled values. Copying between
+fields of the same template retains the variables. Pasting from another template
+or app uses plain text. Formatting is intentionally plain text to match the draft
+handoff; there is no HTML formatting toolbar.
+
+The language choice is metadata; it does not translate your text. The interface
+is in English. Existing backups load directly into the visual editor without a
+migration or re-entering values.
 
 To and Cc accept literal addresses or variables. Use plain email addresses,
 separated by commas or semicolons. Display names and internationalized email
@@ -44,7 +65,7 @@ addresses are not supported; message content supports full Unicode.
 - Right-click a library item to move it up/down, duplicate, or delete it.
 - **Import** adds copies from a backup without replacing existing templates or
   settings. **Export** backs up the entire library, including saved values.
-- **Settings** provides recipient defaults for new templates and a configurable
+- **Settings** prefills To/Cc in new blank templates and provides a configurable
   long-draft warning threshold.
 
 | Shortcut | Action |
@@ -52,6 +73,7 @@ addresses are not supported; message content supports full Unicode.
 | Ctrl+F | Search library |
 | Ctrl+N | New template |
 | Ctrl+S | Save now / retry failed save |
+| Ctrl+Z / Ctrl+Y | Undo / redo in the email editor |
 | Ctrl+Enter | Open a valid draft |
 
 For long messages, choose **Copy body + open draft**, save an **.eml draft**, or

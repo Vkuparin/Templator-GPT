@@ -17,12 +17,15 @@ repository paths. This document supersedes those implementation assumptions.
 
 - C# / .NET 10 LTS, WPF, no third-party runtime packages. Native Windows is a
   good fit for a small, offline utility and OS mail/clipboard integration.
-- Three projects: a UI-independent core, a WPF application, and executable
-  regression tests. UI integration checks exercise the actual WPF controls.
+- Four projects: a UI-independent core, a WPF application, core regression
+  tests, and WPF integration tests exercising actual controls.
 - System fonts, vector shapes, warm paper preview, charcoal workspace, mint
   accent. Standard window chrome retains snapping, resizing, and accessibility.
-- Compose and Edit template are separate modes. Daily use should not expose
-  raw placeholders or definition controls unnecessarily.
+- One visual email editor replaces the separate Compose/Edit modes. To, Cc,
+  subject, and body are edited directly on the paper; no raw syntax is exposed.
+- A palette of named variables supports create-first, drag-to-insert, and click
+  insertion at the last email cursor position. Clicking an inserted chip edits
+  its shared value. Variable properties live in a small dialog.
 - The primary action is **Open draft**, accurately describing what it does.
   Opening a handler is not proof that a mail client accepted every field.
 - A framework-dependent portable build is the default; a self-contained
@@ -40,34 +43,69 @@ Import, Export, and Settings are secondary actions at the bottom. Search matches
 name and subject. Ctrl+F focuses it; Ctrl+N creates a template; Ctrl+Enter opens
 a valid draft; Ctrl+S immediately saves pending work.
 
-Compose shows labeled variable inputs with required markers and example hints.
-A reading pane shows resolved To, Cc, subject, and body. Substituted text is
-subtly highlighted; missing required values remain visible in an amber style.
-The footer shows missing fields, URL size, save state, and draft/copy actions.
-Reset values requires confirmation. English and Finnish starter recipes contain
-no saved personal data or prefilled recipients.
+The email paper is a plain-text WYSIWYG editor, including To, Cc, subject,
+and body. Existing text is directly editable; blank messages show a writing hint.
+Template name is editable in the header. The language selector changes metadata,
+not content. All edits update the reusable template and save automatically.
+The footer communicates readiness or long-draft options in ordinary language.
 
-Edit template exposes name, language (English/Finnish metadata, not automatic
-translation), To, Cc, subject, and a plain-text body editor. A variable definition
-section supports adding keys, labels, example hints, required flags, and deletion.
-Every piece of user content can be changed in the GUI. No JSON editing is needed.
+The variable palette separates reusable details from the message itself:
+
+1. Create a variable with a friendly name, optional example hint, and required flag.
+2. Drag its name to a position in any email field, or place the cursor and click
+   the name. Drop coordinates determine insertion position; dragging near the
+   top/bottom of the email scrolls long messages.
+3. Fill the palette input, or click a chip to edit its value. Every occurrence
+   updates together without moving the text cursor or clearing undo history.
+4. Edit properties through the palette's Edit action. Internal keys never appear.
+
+Empty chips display their names; required empty chips use amber and filled chips
+use green. Optional empty chips remain visible in the editor but produce empty
+text in the outgoing email. Chips add editing affordances, not email formatting.
+New templates are blank, with only settings-provided literal To/Cc prefilled.
+
+## Visual editor contract
+
+`TokenEditor` uses WPF FlowDocument/RichTextBox. Literal text is represented by
+runs/paragraphs; each variable is an atomic InlineUIContainer tagged with its
+stable key. Serialization recovers semantic source, never the rendered value.
+The existing JSON schema is preserved, and legacy placeholders become chips on
+load. Placeholder whitespace is canonicalized for document comparisons only.
+
+- To/Cc/subject reject Enter and normalize pasted line breaks to spaces. Normal
+  address and subject validation still runs before draft handoff.
+- Body paragraph breaks and soft breaks round-trip as newline characters.
+- Local typing keeps the same document, cursor, and WPF undo history. Value/label
+  changes refresh only chip appearance. Template switches and external structure
+  replacement reset document history so undo cannot affect another template.
+- Insertions are one undo operation. Backspace/selection deletion removes a whole
+  chip, and undo restores its identity and click behavior via a routed handler.
+- Copy/cut provide resolved Unicode text to other apps and a private string-only
+  fragment for this template. Same-template paste retains chips only if their
+  definitions still exist; other paste uses plain text, never foreign RTF/XAML.
+- Variable drag payloads are string-only JSON with template ID and key. Reject
+  stale, foreign-template, malformed, and deleted-variable payloads.
+- No rich formatting, HTML, images, or embedded external content is accepted.
 
 ## Variable contract
 
-- Placeholders: `{{key}}`, with optional whitespace inside braces; keys are
+The following is an internal storage contract, not a syntax users need to learn.
+
+- Source uses `{{key}}`, with optional whitespace inside braces. Keys are
   case-sensitive ASCII letters, digits, and underscores.
-- Discover across **all four fields**: To, Cc, subject, and body, in that order.
-- New keys receive a humanized label and are required by default. Starter Cc
-  and delivery date are explicitly optional.
-- Definitions retain their order, metadata, and saved values. A persisted
-  `customized` flag distinguishes deliberate definitions from derived ones.
-- Prune an unreferenced definition only when it has neither a value nor a
-  customization. Retained unused definitions are marked as such and never
-  block opening a draft. Deleting a referenced definition re-derives it.
-- Rendering is a single pass: a value containing `{{text}}` stays literal.
-- Required means non-whitespace. Missing optional values render as empty text.
-- Values persist per template; settings defaults only prefill the conventional
-  `recipient`/`cc_list` fields in newly created templates. Reset stays empty.
+- Friendly names generate safe keys automatically (including Finnish names).
+  Collisions receive numeric suffixes. Renaming a label never changes its key.
+- Discover existing references across all four fields: To, Cc, subject, and body.
+- Definitions, order, metadata, and values persist independently of references.
+  Removing the last chip keeps the variable in the palette and marks it unused.
+  The legacy `customized` flag remains compatible; it no longer controls pruning.
+- Explicit variable deletion removes its definition, saved value, and every use
+  from all four source fields after confirmation. It is not silently re-derived.
+- Required unused variables do not block sending. Referenced required fields must
+  contain non-whitespace values. Missing optional values render as empty text.
+- Rendering is single-pass: placeholder-like content inside a value stays literal.
+- Values are per template. Reset clears variable values, not literal text or
+  addresses typed directly into the email editor.
 
 ## Persistence and recovery
 

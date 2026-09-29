@@ -30,8 +30,6 @@ public sealed class Workspace : Observable, IDisposable
     public string DraftStatus { get; private set => Set(ref field, value); } = "";
     public bool CanOpen { get; private set => Set(ref field, value); }
     public string Progress { get; private set => Set(ref field, value); } = "";
-    public int EditorMode { get; set => Set(ref field, value); }
-    public string NewKey { get; set => Set(ref field, value); } = "";
     public MailDraft? Draft => Selected is null ? null : MailDraft.From(Selected);
     public event EventHandler? PreviewChanged;
 
@@ -127,7 +125,9 @@ public sealed class Workspace : Observable, IDisposable
             CanOpen = missing.Count == 0 && Draft!.ValidationError() == null;
             var total = Selected.Variables.Count(v => v.Referenced && v.Required);
             Progress = $"{total - missing.Count} / {total} required fields";
-            DraftStatus = CanOpen ? $"{Draft!.Mailto().Length:N0} / {Settings.MailtoLengthThreshold:N0} URL characters" : "Draft stays on this device";
+            DraftStatus = CanOpen
+                ? (Draft!.Mailto().Length <= Settings.MailtoLengthThreshold ? "Ready to open in your mail app" : "Long message · draft options available")
+                : "Nothing is sent automatically";
         }
         Notify(nameof(Draft)); PreviewChanged?.Invoke(this, EventArgs.Empty);
     }
@@ -158,15 +158,8 @@ public sealed class Workspace : Observable, IDisposable
     {
         if (Templates.Count >= 1000) { Notice = "Your library has reached the 1,000-template limit."; return; }
         Search = "";
-        var template = new Template { Body = "Hello {{customer_name}},\n\n{{message}}\n\nBest regards,\n{{sender_name}}", Subject = "{{subject}}" };
-        VariableSyntax.Synchronize(template);
-        foreach (var v in template.Variables)
-        {
-            if (v.Key == "cc_list") { v.Required = false; v.Customized = true; }
-            var value = v.Key switch { "recipient" => Settings.DefaultTo, "cc_list" => Settings.DefaultCc, _ => "" };
-            v.Value = value; template.Values[v.Key] = value;
-        }
-        Templates.Add(template); Selected = template; EditorMode = 1; Changed();
+        var template = new Template { Name = "Untitled email", To = Settings.DefaultTo, Cc = Settings.DefaultCc };
+        Templates.Add(template); Selected = template; Changed();
     }
 
     public void Duplicate()
@@ -200,26 +193,39 @@ public sealed class Workspace : Observable, IDisposable
         Selected.Values.Clear(); Sync(); Changed();
     }
 
-    public void AddVariable()
+    public Variable? AddVariable(string label, string example = "", bool required = true)
     {
-        if (Selected == null) return;
-        if (Selected.Variables.Count >= 500) { Notice = "This template has reached the 500-variable limit."; return; }
-        var key = NewKey.Trim(); var match = VariableSyntax.Pattern().Match(key);
-        if (match.Success && match.Length == key.Length) key = match.Groups[1].Value;
-        if (!VariableSyntax.KeyPattern().IsMatch(key)) { Notice = "Use letters, digits, and underscores for a variable key."; return; }
-        if (Selected.Variables.Any(v => v.Key == key)) { Notice = "That variable already exists."; return; }
-        Selected.Variables.Add(new Variable { Key = key, Label = VariableSyntax.Label(key), Customized = true });
-        NewKey = ""; Notice = "Variable added. Insert {{" + key + "}} into a template field to use it."; Changed();
+        if (Selected == null) return null;
+        if (Selected.Variables.Count >= 500) { Notice = "This template has reached the 500-variable limit."; return null; }
+        label = label.Trim();
+        if (label.Length is 0 or > 80) { Notice = "Give the variable a name of 1–80 characters."; return null; }
+        if (Selected.Variables.Any(v => v.Label.Equals(label, StringComparison.OrdinalIgnoreCase)))
+        { Notice = "A variable with that name already exists."; return null; }
+        var variable = new Variable
+        {
+            Key = VariableNaming.NewKey(label, Selected.Variables.Select(v => v.Key)),
+            Label = label, Example = example, Required = required, Customized = true
+        };
+        Selected.Variables.Add(variable);
+        Changed();
+        return variable;
     }
 
     public void DeleteVariable(Variable variable)
     {
         if (Selected == null) return;
-        Selected.Values.Remove(variable.Key); Selected.Variables.Remove(variable);
+        string Remove(string source) => VariableSyntax.Pattern().Replace(source,
+            match => match.Groups[1].Value == variable.Key ? "" : match.Value);
+        syncing = true;
+        try
+        {
+            Selected.To = Remove(Selected.To); Selected.Cc = Remove(Selected.Cc);
+            Selected.Subject = Remove(Selected.Subject); Selected.Body = Remove(Selected.Body);
+            Selected.Values.Remove(variable.Key); Selected.Variables.Remove(variable);
+        }
+        finally { syncing = false; }
         Sync(); Changed();
-        Notice = Selected.Variables.Any(v => v.Key == variable.Key)
-            ? "The variable is still referenced, so a fresh definition was created. Remove its placeholder to remove it completely."
-            : "Variable removed.";
+        Notice = "Variable and its uses removed from this template.";
     }
 
     public void Import(string path)

@@ -17,6 +17,11 @@ public partial class MainWindow : Window
     public Workspace Workspace { get; }
     private readonly MailHandoff mail;
     private bool refreshing;
+    private TokenEditor? activeEditor;
+    private Guid? editingTemplate;
+    private Point dragStart;
+    private bool dragged;
+    private long lastDragScroll;
 
     public MainWindow(Workspace workspace, IMailPlatform? platform = null)
     {
@@ -25,18 +30,38 @@ public partial class MainWindow : Window
         InitializeComponent();
         WindowTheme.Apply(this);
         DataContext = workspace;
+        WireEditor(ToEditor, t => t.To, (t, value) => t.To = value);
+        WireEditor(CcEditor, t => t.Cc, (t, value) => t.Cc = value);
+        WireEditor(SubjectEditor, t => t.Subject, (t, value) => t.Subject = value);
+        WireEditor(BodyEditor, t => t.Body, (t, value) => t.Body = value);
         workspace.PreviewChanged += PreviewChanged;
         WindowPlacement.Restore(this, workspace.DataFolder);
         RefreshPreview();
     }
 
     private void PreviewChanged(object? sender, EventArgs e) => RefreshPreview();
+    private void WireEditor(TokenEditor editor, Func<Template, string> read, Action<Template, string> write)
+    {
+        editor.SourceChanged += (_, _) =>
+        {
+            if (!refreshing && Workspace.Selected is { } template && read(template) != editor.Source)
+                write(template, editor.Source);
+        };
+        editor.GotKeyboardFocus += (_, _) => activeEditor = editor;
+        editor.VariableActivated += EditValue;
+        editor.Message += text => Workspace.Notice = text;
+    }
     private void RefreshPreview()
     {
         refreshing = true;
         try
         {
-            BodyPreview.Render(Workspace.Selected);
+            var template = Workspace.Selected;
+            if (editingTemplate != template?.Id) { activeEditor = BodyEditor; editingTemplate = template?.Id; }
+            ToEditor.LoadTemplate(template, template?.To ?? "");
+            CcEditor.LoadTemplate(template, template?.Cc ?? "");
+            SubjectEditor.LoadTemplate(template, template?.Subject ?? "");
+            BodyEditor.LoadTemplate(template, template?.Body ?? "");
             EnglishRadio.IsChecked = Workspace.Selected?.Language == "en";
             FinnishRadio.IsChecked = Workspace.Selected?.Language == "fi";
         }
@@ -56,7 +81,7 @@ public partial class MainWindow : Window
         return dialog.ShowDialog() == true && dialog.Choice == "confirm";
     }
 
-    private void NewTemplate(object sender, RoutedEventArgs e) { Workspace.NewTemplate(); NameEditor.Focus(); }
+    private void NewTemplate(object sender, RoutedEventArgs e) { Workspace.NewTemplate(); NameEditor.Focus(); NameEditor.SelectAll(); }
     private void Duplicate(object sender, RoutedEventArgs e) => Workspace.Duplicate();
     private void MoveUp(object sender, RoutedEventArgs e) => Workspace.Move(-1);
     private void MoveDown(object sender, RoutedEventArgs e) => Workspace.Move(1);
@@ -68,10 +93,57 @@ public partial class MainWindow : Window
     {
         if (Workspace.HasSelection && Confirm("Start with a clean form?", "Clear all saved values for this template. Its text and field definitions will stay.", "Reset values")) Workspace.Reset();
     }
-    private void AddVariable(object sender, RoutedEventArgs e) => Workspace.AddVariable();
-    private void DeleteVariable(object sender, RoutedEventArgs e)
+    private void AddVariable(object sender, RoutedEventArgs e)
     {
-        if (sender is Button { Tag: Variable variable } && Confirm("Remove this variable?", $"Remove {variable.Key} and its saved value. If its placeholder is still used, a new definition will be created.", "Remove variable")) Workspace.DeleteVariable(variable);
+        if (Workspace.Selected is not { } template) return;
+        var dialog = new VariableDialog(this, template);
+        if (dialog.ShowDialog() == true) Workspace.AddVariable(dialog.VariableName, dialog.Example, dialog.Required);
+    }
+    private void EditVariable(object sender, RoutedEventArgs e)
+    {
+        if (Workspace.Selected is not { } template || sender is not Button { Tag: Variable variable }) return;
+        var dialog = new VariableDialog(this, template, variable);
+        if (dialog.ShowDialog() != true) return;
+        if (dialog.DeleteRequested)
+        {
+            if (Confirm("Delete this variable?", $"“{variable.Label}” will be removed from the variable list and everywhere it appears in this template. Its saved value will also be cleared.", "Delete variable")) Workspace.DeleteVariable(variable);
+            return;
+        }
+        variable.Label = dialog.VariableName; variable.Example = dialog.Example; variable.Required = dialog.Required;
+    }
+    private void EditValue(string key)
+    {
+        var variable = Workspace.Selected?.Variables.FirstOrDefault(v => v.Key == key);
+        if (variable == null) return;
+        var dialog = new VariableValueDialog(this, variable);
+        if (dialog.ShowDialog() == true) variable.Value = dialog.Value;
+    }
+    private void InsertVariable(object sender, RoutedEventArgs e)
+    {
+        if (!dragged && sender is Button { Tag: Variable variable }) (activeEditor ?? BodyEditor).InsertVariable(variable.Key);
+    }
+    private void ChipMouseDown(object sender, MouseButtonEventArgs e)
+    {
+        dragStart = e.GetPosition(this); dragged = false;
+    }
+    private void ChipMouseMove(object sender, MouseEventArgs e)
+    {
+        if (e.LeftButton != MouseButtonState.Pressed || dragged || sender is not Button { Tag: Variable variable } button || Workspace.Selected is not { } template) return;
+        var position = e.GetPosition(this);
+        if (Math.Abs(position.X - dragStart.X) < SystemParameters.MinimumHorizontalDragDistance &&
+            Math.Abs(position.Y - dragStart.Y) < SystemParameters.MinimumVerticalDragDistance) return;
+        dragged = true; e.Handled = true;
+        DragDrop.DoDragDrop(button, TokenEditor.DragData(template, variable), DragDropEffects.Copy);
+        // A release after a drag must not also insert through Button.Click.
+        Dispatcher.BeginInvoke(() => dragged = false, System.Windows.Threading.DispatcherPriority.Background);
+    }
+    private void ScrollWhileDragging(object sender, DragEventArgs e)
+    {
+        if (sender is not ScrollViewer scroll || !BodyEditor.CanDrop(e.Data) || Environment.TickCount64 - lastDragScroll < 40) return;
+        var y = e.GetPosition(scroll).Y;
+        if (y < 32) scroll.ScrollToVerticalOffset(scroll.VerticalOffset - 16);
+        else if (y > scroll.ActualHeight - 32) scroll.ScrollToVerticalOffset(scroll.VerticalOffset + 16);
+        lastDragScroll = Environment.TickCount64;
     }
     private void LanguageChanged(object sender, RoutedEventArgs e)
     {
@@ -141,7 +213,7 @@ public partial class MainWindow : Window
         switch (e.Key)
         {
             case Key.F: SearchBox.Focus(); SearchBox.SelectAll(); break;
-            case Key.N: Workspace.NewTemplate(); break;
+            case Key.N: NewTemplate(this, new RoutedEventArgs()); break;
             case Key.S: Workspace.Flush(); break;
             case Key.Enter: OpenDraft(this, new RoutedEventArgs()); break;
             default: return;

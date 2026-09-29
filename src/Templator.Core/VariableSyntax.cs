@@ -28,15 +28,10 @@ public static partial class VariableSyntax
                 {
                     Key = key, Label = Label(key), Value = template.Values.GetValueOrDefault(key, "")
                 });
-        foreach (var variable in template.Variables.ToArray())
-        {
+        // The field library is independent from its uses in the message. Keeping
+        // unused fields also lets undo restore a removed chip with its identity.
+        foreach (var variable in template.Variables)
             variable.Referenced = keys.Contains(variable.Key);
-            if (!variable.Referenced && !variable.Customized && string.IsNullOrEmpty(variable.Value))
-            {
-                template.Variables.Remove(variable);
-                template.Values.Remove(variable.Key);
-            }
-        }
     }
 
     public static IEnumerable<TextSegment> Segments(string source, Template template)
